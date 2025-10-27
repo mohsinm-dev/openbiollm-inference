@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  vllm:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vllm
+    container_name: vllm
+    environment:
+      - VLLM_MODEL_ID=${VLLM_MODEL_ID:-aaditya/Llama3-OpenBioLLM-8B}
+      - VLLM_MAX_MODEL_LEN=${VLLM_MAX_MODEL_LEN:-8192}
+      - VLLM_TP_SIZE=${VLLM_TP_SIZE:-1}
+    command: >
+      python -m vllm.entrypoints.openai.api_server
+      --model ${VLLM_MODEL_ID:-aaditya/Llama3-OpenBioLLM-8B}
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-8192}
+      --tensor-parallel-size ${VLLM_TP_SIZE:-1}
+      --port ${VLLM_PORT:-8001}
+      --dtype bfloat16
+    ports:
+      - "${VLLM_PORT:-8001}:8001"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  app:
+    image: python:3.12-slim
+    container_name: openbiollm-app
+    working_dir: /app
+    env_file: ../.env
+    volumes:
+      - ../:/app
+    command: bash -lc "pip install -e '.[gpu]' && uvicorn openbiollm_inference.serve_gpu.fastapi_app:app --host ${APP_HOST:-0.0.0.0} --port ${APP_PORT:-8000} --log-level info"
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      - vllm

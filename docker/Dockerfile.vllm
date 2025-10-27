@@ -1,0 +1,4 @@
+# vLLM GPU image
+FROM vllm/vllm-openai:latest
+
+# Exposes OpenAI-compatible /v1 routes at $VLLM_PORT (configured by entrypoint).
