@@ -1,0 +1,38 @@
+[project]
+name = "openbiollm-inference"
+version = "0.1.0"
+description = "Run OpenBioLLM locally on Apple Silicon (GGUF/MLX) and on GPU via vLLM + FastAPI."
+requires-python = ">=3.12"
+authors = [{name="OpenBioLLM Starter"}]
+
+dependencies = []
+
+[project.optional-dependencies]
+mac-gguf = [
+    "llama-cpp-python>=0.2.90",
+    "numpy>=1.26",
+    "pydantic>=2",
+    "pyyaml>=6.0.1"
+]
+mac-mlx = [
+    "mlx-lm>=0.0.13",
+    "numpy>=1.26",
+    "pydantic>=2",
+    "pyyaml>=6.0.1"
+]
+gpu = [
+    "vllm>=0.5.4",
+    "fastapi>=0.112",
+    "uvicorn[standard]>=0.30",
+    "httpx>=0.27",
+    "pydantic>=2",
+    "pyyaml>=6.0.1"
+]
+
+[tool.uv]
+# uv will read dependencies from optional extras; use `uv pip install -e .[mac-gguf]` etc.
+cache-keys = ["linux", "macos", "windows"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

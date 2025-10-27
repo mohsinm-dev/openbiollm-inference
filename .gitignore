@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.DS_Store
+.venv/
+.env
+artifacts/
+models/
+!.env.example
+!models/gguf/.gitkeep
