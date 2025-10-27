@@ -1,0 +1,7 @@
+model_id: "aaditya/Llama3-OpenBioLLM-8B"
+dtype: "bfloat16"
+tensor_parallel_size: 1
+max_model_len: 8192
+temperature: 0.2
+top_p: 0.9
+max_tokens: 512
