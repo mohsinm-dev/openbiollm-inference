@@ -14,7 +14,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from openbiollm_inference.common.logging_setup import setup_logging
-from openbiollm_inference.common.templates import load_template, render_prompt
+from openbiollm_inference.common.templates import load_template
 
 LOGGER = logging.getLogger("openbiollm.gpu.app")
 setup_logging()
@@ -38,27 +38,59 @@ class GenerateOut(BaseModel):
 
 app = FastAPI()
 
+@app.on_event("startup")
+def _validate_template_on_startup() -> None:
+    """Validate prompt template shape on startup and warn if malformed."""
+    try:
+        template = load_template()
+        has_sys = "<|system|>" in template
+        has_user = "<|user|>" in template
+        if not (has_sys and has_user):
+            LOGGER.warning(
+                "Prompt template missing expected tags; found system=%s user=%s",
+                has_sys,
+                has_user,
+            )
+    except Exception as e:
+        LOGGER.warning("Failed to read prompt template: %s", e)
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "model": MODEL_ID}
 
+def _extract_system(template: str) -> str:
+    """Extract system prompt from the template between <|system|> and <|user|>.
+
+    Falls back to a concise default if tags are missing.
+    """
+    sys_tag, user_tag = "<|system|>", "<|user|>"
+    try:
+        if sys_tag in template and user_tag in template:
+            start = template.index(sys_tag) + len(sys_tag)
+            end = template.index(user_tag, start)
+            return template[start:end].strip()
+    except Exception:
+        pass
+    return "You are a careful clinical assistant. Be concise."
+
+
 @app.post("/generate", response_model=GenerateOut)
 def generate(body: GenerateIn) -> GenerateOut:
     template = load_template()
-    prompt = render_prompt(template, body.input)
+    system_prompt = _extract_system(template)
 
     url = f"{VLLM_BASE_URL}/v1/chat/completions"
     headers = {"Authorization": f"Bearer {VLLM_API_KEY}"}
     payload = {
         "model": MODEL_ID,
         "messages": [
-            {"role": "system", "content": "You are a careful clinical assistant. Be concise."},
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": body.input},
         ],
         "temperature": TEMPERATURE,
         "top_p": TOP_P,
         "max_tokens": MAX_TOKENS,
-        "stream": False
+        "stream": False,
     }
 
     start = time.time()
