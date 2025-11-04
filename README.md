@@ -81,6 +81,10 @@ This starts:
 - vllm serving OpenAI-compatible API
 - app FastAPI proxy at http://localhost:8000
 
+Notes:
+- The `app` container installs only the `.[app]` extra (FastAPI, Uvicorn, httpx, etc.); the `vllm` dependency lives only in the `vllm` container.
+- The proxy reads the system prompt from `configs/prompt_template.txt`; on startup it warns if the template lacks `<|system|>`/`<|user|>` tags.
+
 Test:
 ```bash
 curl -X POST http://localhost:8000/generate -H "Content-Type: application/json"   -d '{"input":"Give two differentials for fever in adults."}'
@@ -128,3 +132,14 @@ openbiollm inference/
 - Keep your prompt template stable between local and GPU serving for consistent behavior.
 - For production: add authentication in FastAPI, rate-limits at NGINX, and observability stack (Loki/Grafana).
 - To extend: add a RAG service and a prompt registry with Redis caching.
+
+---
+
+## 7) Tests
+
+Install dev deps and run tests:
+
+```bash
+uv pip install -e ".[app]" -e ".[dev]"
+pytest -q
+```
